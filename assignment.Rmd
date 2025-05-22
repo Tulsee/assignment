@@ -11,6 +11,7 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 #install.packages("matlib")
 #install.packages("rsample")
 install.packages("dplyr")
+
 ```
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
@@ -21,6 +22,9 @@ Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by press
 library(matlib)
 library(ggplot2)
 library(rsample)
+library(patchwork)
+library(gridExtra)
+library(grid)
 ```
 
 ## Importing data from csv
@@ -49,8 +53,40 @@ Y.ts<-ts(Y,start = c(min(time),max(time)),frequency =1)
 ```
 
 ```{r}
-plot(X.ts,main = "Time series plot of X Signal", xlab = "Time", ylab = "Input signal")
-plot(Y.ts,main = "Time series plot of Y Signal", xlab = "Time", ylab = "Output signal")
+plot(X.ts, main = "Time series plot of X Signal", xlab = "Time", ylab = "Input signal", col = "steelblue")
+plot(Y.ts, main = "Time series plot of Y Signal", xlab = "Time", ylab = "Output signal", col = "steelblue")
+```
+
+```{r}
+plot_ts <- function(data, group_size = 100, n_groups = 3) {
+  
+  if(!"Index" %in% names(data)) {
+    data$Index <- 1:nrow(data)
+  }
+  
+  variables <- setdiff(names(data)[sapply(data, is.numeric)], "Index")
+  
+  for (var_name in variables) {
+    
+    # Group plots
+    plot_list <- list()
+    for (i in 1:n_groups) {
+      start_idx <- (i-1) * group_size + 1
+      end_idx <- min(start_idx + group_size - 1, nrow(data))
+      subset_df <- data[start_idx:end_idx, ]
+      
+      p <- ggplot(subset_df, aes(x = Index, y = .data[[var_name]])) +
+        geom_line(color = "darkorange") +
+        labs(title = paste("Group", i), x = "Index", y = if(var_name == "x2") "Y" else var_name) +
+        theme_minimal()
+      
+      plot_list[[i]] <- p
+    }
+    
+    grid.arrange(grobs = plot_list, ncol = 1, top = paste("Groups -", if(var_name == "x2") "Y" else var_name))
+  }
+}
+plot_ts(df)
 ```
 
 ```{r}
